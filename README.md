@@ -12,7 +12,7 @@ Live product: <https://mobile-sprite-pack.sociobot.in>
 - Previews frames with pixel-perfect zoom, playback, keyboard arrow navigation, and a touch-friendly frame strip.
 - Trims transparency, adds transparent padding, and quantizes to three included palettes with optional Floyd–Steinberg dithering.
 - Exports a valid PNG spritesheet and JSON atlas in a ZIP. On iOS it uses the share sheet when the browser supports file sharing.
-- Persists the last source project in IndexedDB for local recovery and works offline after the first successful visit.
+- Persists the last source project and packing settings (grid, finish, frame timing, selected frame, zoom, and atlas columns) in IndexedDB for local recovery and works offline after the first successful visit.
 
 The free tier supports the complete 16-frame workflow. Pocket Pro is a US $9 one-time license that adds custom palettes and batches above 16 frames through the Sociobot billing API; no payment provider is embedded.
 

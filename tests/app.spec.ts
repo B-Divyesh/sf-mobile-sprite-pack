@@ -67,6 +67,46 @@ test('keeps frame navigation keyboard-operable without mobile overflow',async({p
   expect(widths.body).toBeLessThanOrEqual(widths.viewport);
 });
 
+test('resumes a transformed project with its packing settings after reload and offline recovery',async({page,context})=>{
+  await page.goto('/');
+  await page.locator('#file-input').setInputFiles(resolve('tests/assets/test-sheet.png'));
+  await page.locator('#auto-grid').click();
+  await page.locator('#trim').check();
+  await page.locator('#padding').fill('1');
+  await page.locator('#palette').selectOption('gameboy');
+  await page.locator('#dither').selectOption('floyd');
+  await page.locator('#next-frame').click();
+  await page.locator('#next-frame').click();
+  await page.locator('#delay').fill('240');
+  await page.locator('#delay').press('Tab');
+  await page.locator('#zoom').evaluate((input:HTMLInputElement)=>{input.value='9';input.dispatchEvent(new Event('input',{bubbles:true}))});
+  await page.locator('#export-columns').fill('2');
+  await page.locator('#export-columns').press('Tab');
+  await page.waitForFunction(async()=>{
+    const request=indexedDB.open('pocket-sprite-pack',2);
+    const project=await new Promise<any>((resolve,reject)=>{
+      request.onerror=()=>reject(request.error);
+      request.onsuccess=()=>{const db=request.result;const get=db.transaction('project').objectStore('project').get('lastProject');get.onsuccess=()=>{resolve(get.result);db.close()};get.onerror=()=>reject(get.error)};
+    });
+    return project?.schema===1&&project.settings?.columns===4&&project.settings?.rows===4&&project.settings?.trim===true&&project.settings?.padding===1&&project.settings?.palette==='gameboy'&&project.settings?.dither==='floyd'&&project.settings?.currentFrame===2&&project.settings?.frameDurations?.[2]===240&&project.settings?.zoom===9&&project.settings?.exportColumns===2;
+  });
+  await page.reload();
+  await expect(page.locator('#resume-button')).toBeVisible();
+  await context.setOffline(true);
+  await page.locator('#resume-button').click();
+  await expect(page.locator('#frame-count')).toHaveText('Frame 3 / 16');
+  await expect(page.locator('#columns')).toHaveValue('4');
+  await expect(page.locator('#rows')).toHaveValue('4');
+  await expect(page.locator('#trim')).toBeChecked();
+  await expect(page.locator('#padding')).toHaveValue('1');
+  await expect(page.locator('#palette')).toHaveValue('gameboy');
+  await expect(page.locator('#dither')).toHaveValue('floyd');
+  await expect(page.locator('#delay')).toHaveValue('240');
+  await expect(page.locator('#zoom')).toHaveValue('9');
+  await expect(page.locator('#export-columns')).toHaveValue('2');
+  await expect(page.locator('#transform-note')).toContainText('Moss pocket');
+});
+
 test('app shell returns after the network is disabled',async({page,context})=>{
   const errors:string[]=[];page.on('console',message=>{if(message.type()==='error')errors.push(message.text())});page.on('pageerror',error=>errors.push(error.message));
   await page.goto('/');await page.waitForFunction(()=>navigator.serviceWorker?.controller!==null);

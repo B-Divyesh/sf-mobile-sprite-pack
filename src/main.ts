@@ -2,7 +2,7 @@ import './style.css';
 import { decodeFiles } from './decode';
 import { sliceGrid, suggestGrid, transformPixels, type PixelFrame, type TransformOptions, type PaletteName, type DitherName } from './pixels';
 import { createZip } from './zip';
-import { saveProject, loadProject, hasProject, clearProject } from './storage';
+import { saveProject, loadProject, hasProject, clearProject, type ProjectSettings } from './storage';
 import { captureLicenseFromUrl, checkoutUrl, isProCached, storeLicense, verifyLicense } from './license';
 
 const $=<T extends HTMLElement>(selector:string)=>document.querySelector<T>(selector)!;
@@ -35,6 +35,39 @@ function setProgress(stop:number){
   document.querySelectorAll<HTMLElement>('.route-rail li').forEach((item,index)=>{item.classList.toggle('active',index+1===stop);item.classList.toggle('complete',index+1<stop);});
 }
 function options():TransformOptions{return{trim:trim.checked,padding:Number(padding.value),palette:palette.value as PaletteName,dither:dither.value as DitherName,customPalette:customPalette.value};}
+function currentSettings():ProjectSettings{return{
+  columns:Number(columns.value),rows:Number(rows.value),trim:trim.checked,padding:Number(padding.value),palette:palette.value,dither:dither.value,customPalette:customPalette.value,
+  currentFrame,zoom:Number($<HTMLInputElement>('#zoom').value),exportColumns:Number($<HTMLInputElement>('#export-columns').value),frameDurations:baseFrames.map(frame=>frame.duration)
+};}
+async function persistCurrentProject(){if(sourceFiles.length)await saveProject(sourceFiles,currentSettings());}
+let projectSaveQueue=Promise.resolve();
+function queueProjectSave(){projectSaveQueue=projectSaveQueue.catch(()=>undefined).then(persistCurrentProject);return projectSaveQueue;}
+function persistAfterChange(){void queueProjectSave().catch(()=>setStatus('Could not save this project locally. Editing and export still work.','error'));}
+function boundedInteger(value:number,min:number,max:number,fallback:number){return Number.isInteger(value)&&value>=min&&value<=max?value:fallback;}
+function applySavedSettings(settings:ProjectSettings,canSlice:boolean){
+  if(canSlice){columns.value=String(boundedInteger(settings.columns,1,64,1));rows.value=String(boundedInteger(settings.rows,1,64,1));}
+  trim.checked=Boolean(settings.trim);padding.value=String(boundedInteger(settings.padding,0,16,0));$('#padding-output').textContent=padding.value;
+  if(['original','pico8','gameboy','cga','custom'].includes(settings.palette))palette.value=settings.palette;
+  if(['none','floyd'].includes(settings.dither))dither.value=settings.dither;
+  customPalette.value=typeof settings.customPalette==='string'?settings.customPalette:customPalette.value;
+  $('#custom-palette-wrap').hidden=palette.value!=='custom';
+  const zoom=$<HTMLInputElement>('#zoom');zoom.value=String(boundedInteger(settings.zoom,1,16,6));$('#zoom-output').textContent=`${zoom.value}×`;
+  $<HTMLInputElement>('#export-columns').value=String(boundedInteger(settings.exportColumns,1,16,4));
+  currentFrame=Math.max(0,Number.isInteger(settings.currentFrame)?settings.currentFrame:0);
+}
+function restoreFrameState(settings:ProjectSettings){
+  settings.frameDurations.forEach((duration,index)=>{
+    if(index<baseFrames.length&&Number.isFinite(duration)){
+      const next=Math.max(20,Math.min(5000,Math.round(duration)));
+      baseFrames[index].duration=next;transformedFrames[index].duration=next;
+    }
+  });
+  currentFrame=Math.min(currentFrame,Math.max(0,transformedFrames.length-1));renderAll();updateTransformNote();
+}
+function updateTransformNote(){
+  const color=palette.selectedOptions[0].textContent;const ditherText=dither.value==='floyd'?' with Floyd–Steinberg dithering':'';
+  $('#transform-note').textContent=palette.value==='original'?`No color transform. ${trim.checked?'Transparent edges are trimmed.':'Original bounds are kept.'}`:`Colors are mapped to ${color}${ditherText}. Alpha is preserved.`;
+}
 function rebuildFrames(){
   if(!decodedFrames.length)return;
   try{
@@ -69,20 +102,19 @@ function rebuildThumbnails(){
   transformedFrames.forEach((frame,index)=>{
     const button=document.createElement('button');button.className=`frame-thumb${index===currentFrame?' active':''}`;button.setAttribute('role','listitem');button.setAttribute('aria-label',`Show frame ${index+1}`);
     const thumb=document.createElement('canvas');thumb.width=frame.data.width;thumb.height=frame.data.height;thumb.getContext('2d')!.putImageData(frame.data,0,0);button.append(thumb);
-    button.addEventListener('click',()=>{currentFrame=index;renderAll()});strip.append(button);
+    button.addEventListener('click',()=>{currentFrame=index;renderAll();persistAfterChange()});strip.append(button);
   });
 }
 
 function renderTransforms(){
   if(!baseFrames.length)return;
   try{transformedFrames=baseFrames.map(frame=>({...frame,data:transformPixels(frame.data,options())}));rebuildThumbnails();renderAll();
-    const color=palette.selectedOptions[0].textContent;const ditherText=dither.value==='floyd'?' with Floyd–Steinberg dithering':'';
-    $('#transform-note').textContent=palette.value==='original'?`No color transform. ${trim.checked?'Transparent edges are trimmed.':'Original bounds are kept.'}`:`Colors are mapped to ${color}${ditherText}. Alpha is preserved.`;
+    updateTransformNote();
     setProgress(3);
   }catch(error){setStatus(error instanceof Error?error.message:'Could not apply the transform.','error');}
 }
 
-async function loadFiles(files:File[],persist=true){
+async function loadFiles(files:File[],savedSettings:ProjectSettings|null=null){
   if(!files.length)return;
   stopPlayback();setStatus(`Reading ${files.length} source file${files.length===1?'':'s'} on this device…`);stage.setAttribute('aria-busy','true');
   try{
@@ -91,18 +123,21 @@ async function loadFiles(files:File[],persist=true){
     const canSlice=decodedFrames.length===1 && files.length===1;
     setSettingsEnabled(true);
     columns.value='1';rows.value='1';
+    if(savedSettings)applySavedSettings(savedSettings,canSlice);
     $('#grid-help').textContent=canSlice?`${suggestion.confidence} Choose Detect grid to apply it.`:'This source already contains separate animation frames.';
     columns.disabled=!canSlice;rows.disabled=!canSlice;$<HTMLButtonElement>('#auto-grid').disabled=!canSlice;
     $('#source-summary').hidden=false;$('#source-summary').textContent=`${files.map(file=>file.name).join(', ')} · ${decodedFrames.length} decoded frame${decodedFrames.length===1?'':'s'}`;
     stage.classList.remove('empty');$('#empty-state').hidden=true;$('#transport').hidden=false;$('#export-bay').hidden=false;
-    rebuildFrames();setProgress(2);
+    if(!rebuildFrames())return;
+    if(savedSettings)restoreFrameState(savedSettings);
+    setProgress(2);
     setStatus(result.warnings[0]??`${baseFrames.length} frame${baseFrames.length===1?'':'s'} ready. Check the boundaries, then export.`,result.warnings.length?'normal':'success');
-    if(persist)await saveProject(files);
+    await queueProjectSave();
   }catch(error){setStatus(error instanceof Error?error.message:'These files could not be opened. Try PNG, GIF, or WebP.','error');}
   finally{stage.removeAttribute('aria-busy');}
 }
 
-function changeFrame(amount:number){if(!transformedFrames.length)return;currentFrame=(currentFrame+amount+transformedFrames.length)%transformedFrames.length;renderAll();}
+function changeFrame(amount:number){if(!transformedFrames.length)return;currentFrame=(currentFrame+amount+transformedFrames.length)%transformedFrames.length;renderAll();persistAfterChange();}
 function stopPlayback(){window.clearTimeout(playTimer);playTimer=0;$('#play-frame').textContent='Play';$('#play-frame').setAttribute('aria-label','Play animation');}
 function playNext(){if(!playTimer)return;changeFrame(1);playTimer=window.setTimeout(playNext,transformedFrames[currentFrame].duration);}
 function togglePlayback(){if(playTimer){stopPlayback();return;}if(transformedFrames.length<2)return;playTimer=window.setTimeout(playNext,transformedFrames[currentFrame].duration);$('#play-frame').textContent='Pause';$('#play-frame').setAttribute('aria-label','Pause animation');}
@@ -125,18 +160,19 @@ async function exportAtlas(){
   }catch(error){if((error as DOMException).name==='AbortError'){setStatus('Export sharing was cancelled.');return;}setStatus(error instanceof Error?error.message:'Could not export the atlas.','error');}
 }
 
-fileInput.addEventListener('change',()=>loadFiles(Array.from(fileInput.files||[])));
+fileInput.addEventListener('change',()=>void loadFiles(Array.from(fileInput.files||[])));
 dropZone.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();fileInput.click();}});
 for(const type of ['dragenter','dragover'])dropZone.addEventListener(type,event=>{event.preventDefault();dropZone.classList.add('dragging')});
 for(const type of ['dragleave','drop'])dropZone.addEventListener(type,event=>{event.preventDefault();dropZone.classList.remove('dragging')});
-dropZone.addEventListener('drop',event=>loadFiles(Array.from(event.dataTransfer?.files||[])));
-columns.addEventListener('change',rebuildFrames);rows.addEventListener('change',rebuildFrames);
-$('#auto-grid').addEventListener('click',()=>{if(!decodedFrames.length)return;const grid=suggestGrid(decodedFrames[0].data.width,decodedFrames[0].data.height);columns.value=String(grid.columns);rows.value=String(grid.rows);$('#grid-help').textContent=grid.confidence;rebuildFrames();});
-for(const control of [trim,padding,palette,dither,customPalette])control.addEventListener(control===padding?'input':'change',()=>{if(control===padding)$('#padding-output').textContent=padding.value;if(control===palette){if(palette.value==='custom'&&!proUnlocked){palette.value='original';openPro('Custom palettes are part of Pocket Pro.');return;}$('#custom-palette-wrap').hidden=palette.value!=='custom';}renderTransforms();});
-$('#zoom').addEventListener('input',event=>{const value=(event.target as HTMLInputElement).value;$('#zoom-output').textContent=`${value}×`;if(transformedFrames.length)renderAll();});
+dropZone.addEventListener('drop',event=>void loadFiles(Array.from(event.dataTransfer?.files||[])));
+for(const control of [columns,rows])control.addEventListener('change',()=>{if(rebuildFrames())persistAfterChange()});
+$('#auto-grid').addEventListener('click',()=>{if(!decodedFrames.length)return;const grid=suggestGrid(decodedFrames[0].data.width,decodedFrames[0].data.height);columns.value=String(grid.columns);rows.value=String(grid.rows);$('#grid-help').textContent=grid.confidence;if(rebuildFrames())persistAfterChange()});
+for(const control of [trim,padding,palette,dither,customPalette])control.addEventListener(control===padding?'input':'change',()=>{if(control===padding)$('#padding-output').textContent=padding.value;if(control===palette){if(palette.value==='custom'&&!proUnlocked){palette.value='original';openPro('Custom palettes are part of Pocket Pro.');return;}$('#custom-palette-wrap').hidden=palette.value!=='custom';}renderTransforms();persistAfterChange();});
+$('#zoom').addEventListener('input',event=>{const value=(event.target as HTMLInputElement).value;$('#zoom-output').textContent=`${value}×`;if(transformedFrames.length)renderAll();persistAfterChange();});
 $('#prev-frame').addEventListener('click',()=>changeFrame(-1));$('#next-frame').addEventListener('click',()=>changeFrame(1));$('#play-frame').addEventListener('click',togglePlayback);
 stage.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'){event.preventDefault();changeFrame(-1)}if(event.key==='ArrowRight'){event.preventDefault();changeFrame(1)}});
-$('#delay').addEventListener('change',event=>{if(!baseFrames.length)return;const value=Math.max(20,Math.min(5000,Number((event.target as HTMLInputElement).value)));baseFrames[currentFrame].duration=value;transformedFrames[currentFrame].duration=value;renderAll()});
+$('#delay').addEventListener('change',event=>{if(!baseFrames.length)return;const value=Math.max(20,Math.min(5000,Number((event.target as HTMLInputElement).value)));baseFrames[currentFrame].duration=value;transformedFrames[currentFrame].duration=value;renderAll();persistAfterChange()});
+$('#export-columns').addEventListener('change',persistAfterChange);
 $('#export-button').addEventListener('click',exportAtlas);
 
 function openPro(message=''){if(message)$('#license-status').textContent=message;proDialog.showModal();}
@@ -144,7 +180,7 @@ $('#pro-button').addEventListener('click',()=>openPro());$('#footer-pro').addEve
 proDialog.addEventListener('click',event=>{if(event.target===proDialog)proDialog.close()});
 $('#license-form').addEventListener('submit',async event=>{event.preventDefault();const token=$<HTMLInputElement>('#license-input').value.trim();if(!token){$('#license-status').textContent='Paste a license token first.';return;}storeLicense(token);$('#license-status').textContent='Checking license…';const verdict=await verifyLicense(true);proUnlocked=verdict.valid;$('#license-status').textContent=verdict.valid?'Pocket Pro is unlocked on this device.':verdict.reason==='offline'?'Could not verify while offline. Reconnect once to restore.':'That license is not active for Pocket Sprite Pack.';if(verdict.valid)setTimeout(()=>proDialog.close(),900);});
 
-$('#resume-button').addEventListener('click',async()=>{const files=await loadProject();if(files)loadFiles(files,false)});
+$('#resume-button').addEventListener('click',async()=>{const project=await loadProject();if(project)void loadFiles(project.files,project.settings)});
 $('#clear-data').addEventListener('click',async()=>{await clearProject();$('#resume-button').hidden=true;setStatus('Local recovery project cleared. Source files were not changed.','success')});
 
 function updateNetwork(){const online=navigator.onLine;$('#network-state').innerHTML=`<i></i> ${online?'Ready offline':'Offline mode'}`;$('#network-state').classList.toggle('offline',!online)}
