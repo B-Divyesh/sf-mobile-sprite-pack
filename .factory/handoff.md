@@ -9,7 +9,7 @@
 1. **Offline app shell:** `scripts/postbuild.mjs` now enumerates the built artifact and generates `dist/sw.js` with every executable app-shell dependency, including content-hashed JS and CSS. It creates a fresh `psp-…` cache version on every build. The worker is cache-first for assets, network-first for navigation, and uses Vary-safe cache matching for reliable offline reloads.
 2. **Grid integrity:** `validateGrid` rejects non-integers, values outside the source/64-cell limits, and rows/columns that do not evenly divide the image. The editor preserves the prior valid preview, marks inputs invalid, and announces a specific live error instead of throwing.
 3. **Update notice:** activation detects a prior `psp-…` cache, claims clients, and sends `APP_UPDATED`; the app also observes waiting/installing workers. The in-app toast is covered with a real old-profile worker-update test.
-4. **Static deployment policy:** `public/_headers` ships a restrictive CSP, Permissions-Policy, MIME/referrer/frame protections, revalidation for HTML/worker responses, and one-year immutable caching for hashed assets. `_headers` is deliberately excluded from the service-worker precache because compatible hosts treat it as deployment configuration.
+4. **Static deployment policy:** Azure Static Web Apps' `public/staticwebapp.config.json` (plus a portable `_headers` equivalent) ships a restrictive CSP, Permissions-Policy, MIME/referrer/frame protections, revalidation for HTML/worker responses, and one-year immutable caching for hashed assets. Deployment-policy files are deliberately excluded from the service-worker precache because compatible hosts treat them as configuration.
 
 ## Run and verify
 
@@ -34,7 +34,7 @@ Evidence from this repair checkout on 2026-08-27 UTC:
 
 ## Deployment
 
-Artifact class remains **static PWA**. Deploy `./dist` unchanged using the factory static deployment. The artifact includes `_headers`; the static host must honor it rather than replacing its cache/security policy. After deployment, verify `sw.js` is no-cache, hashed `/assets/*` are immutable, and the CSP/Permissions-Policy/frame protections are present on `/`.
+Artifact class remains **static PWA**. Deploy `./dist` unchanged using the factory static deployment. The artifact includes Azure Static Web Apps' `staticwebapp.config.json` and a portable `_headers` policy; the static host must honor it rather than replacing its cache/security policy. After deployment, verify `sw.js` is no-cache, hashed `/assets/*` are immutable, and the CSP/Permissions-Policy/frame protections are present on `/`.
 
 ## Known gaps
 

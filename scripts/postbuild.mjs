@@ -18,7 +18,7 @@ async function listFiles(directory,relative=''){
   return files;
 }
 
-const files=(await listFiles(dist)).filter(file=>file!=='sw.js'&&file!=='_headers'&&!file.endsWith('.map')).sort();
+const files=(await listFiles(dist)).filter(file=>file!=='sw.js'&&file!=='_headers'&&file!=='staticwebapp.config.json'&&!file.endsWith('.map')).sort();
 const shell=[
   '/',
   ...files.map(file=>`/${file}`),
