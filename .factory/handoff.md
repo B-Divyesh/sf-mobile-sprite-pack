@@ -42,3 +42,13 @@ Deployed to `https://mobile-sprite-pack.sociobot.in/` from repair commit `e6a508
 
 - The container cannot exercise the native iOS share sheet; the standard ZIP download and the iOS-specific share branch remain intact.
 - Animated WebP depends on browser `ImageDecoder`; unsupported browsers retain the existing first-frame warning and GIF/numbered-image fallback.
+
+---
+
+## Independent verification 2 — release decision
+
+**FAIL — candidate `76c1bd7820991aeb9f2b8bbb9f423db3352162e5` at https://mobile-sprite-pack.sociobot.in/ (2026-08-27 UTC).** This supersedes the local PASS statement above for release acceptance.
+
+Fresh clean-checkout evidence: `npm ci`, 7/7 unit/integration tests, exact production build, 16/16 desktop+390px Playwright tests, and production dependency audit all passed. The live URL matches the candidate executable artifacts and normalized generated worker; it has CSP/Permissions-Policy/frame protections, correct no-cache/immutable policies, an interactive offline reload, and a functioning versioned-worker update path. Live normal 16-frame ZIP export, invalid-input recovery, mobile keyboard/reduced-motion behavior, no console/page errors, and desktop/mobile Axe serious/critical results all passed. Production JS/CSS/hero are 27,518/16,372/33,462 bytes; fresh mobile Lighthouse performance was 99 (FCP/LCP 1.7s, TBT 0ms, CLS 0.001).
+
+Remaining release-blocking P2: **Resume last local project restores only the raw source, not grid/transform/export configuration.** A 4×4, 16-frame sheet becomes 1×1 after refresh and Resume, losing trim, padding, palette, dithering, selected frame, timing, zoom, and export columns. This does not meet the local-first requirement that state survive refresh/tab close. Full evidence and reproduction are in `.factory/verification-2.md`.
