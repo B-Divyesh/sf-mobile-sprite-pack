@@ -1,0 +1,9 @@
+{
+  "tool": "/opt/fleet/lib/gen-image.sh",
+  "model": "factory-image (Azure AI Foundry)",
+  "date": "2026-08-27",
+  "source": "hero-depot-v2.png",
+  "prompt": "Use case: stylized-concept. Asset type: landscape landing-page hero illustration. Scene: a miniature 1930s art-deco night train depot interpreted as a sprite asset dispatch station. Subject: one tiny abstract pixel-art courier carrying a fan of translucent animation cels, approaching a stepped geometric arch. Style: sophisticated flat screen-print poster with subtle paper grain and crisp blocky pixel accents, original and playful. Composition: strong stepped arch and subject on the right half, generous calm midnight negative space on the left, clean silhouettes. Materials: ink-blue enamel, warm cream paper, brass rails, coral signal lamp, mint glass tiles. Lighting: flat poster lighting, no gradients. Constraints: no words, letters, numbers, logos, watermark, famous or copyrighted characters, fake UI, photorealism, or visual clutter.",
+  "edit": "Removed letter-like artifacts on the depot wall while preserving composition and palette.",
+  "license": "Original generated asset for Pocket Sprite Pack; no third-party references."
+}

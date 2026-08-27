@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Pocket Sprite Pack mark">
+  <rect width="512" height="512" rx="56" fill="#101a22"/>
+  <path d="M112 390V214l144-144 144 144v176h-72V242l-72-72-72 72v148z" fill="#fff5d6"/>
+  <path d="M184 390v-72h72v72zm72-72v-72h72v72zm72 72v-72h72v72z" fill="#f4b942"/>
+  <path d="M112 318h72v72h-72z" fill="#ef6a5b"/>
+  <path d="M184 246h72v72h-72z" fill="#62d2a2"/>
+</svg>

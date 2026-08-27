@@ -1,0 +1,11 @@
+{
+  "slug": "mobile-sprite-pack",
+  "title": "Pocket Sprite Pack",
+  "territory": "games-creative",
+  "user": "Game-jam artists working from an iPad/phone or a shared folder who need to inspect, convert, and package small sprites and animations without a desktop editor.",
+  "smallest_useful_product": "Offline PWA that opens PNG/GIF/WebP, previews frames at native scale, crops/pads, quantizes to a chosen palette, and exports spritesheet plus JSON atlas.",
+  "success_measure": "A user packages a 16-frame asset into a valid atlas from a phone in under two minutes, with 95% correct frame boundaries on a supplied test set.",
+  "artifact_class": "pwa-offline",
+  "monetization": "one-time",
+  "constraints": "Operate entirely on-device; preserve source files; state palette/dithering transforms clearly; test mobile memory limits and iOS download behavior."
+}
