@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { findOpaqueBounds, hexToRgb, parseCustomPalette, suggestGrid, transformPixels } from './pixels';
+import { findOpaqueBounds, hexToRgb, parseCustomPalette, sliceGrid, suggestGrid, transformPixels, type PixelFrame, validateGrid } from './pixels';
 import { createZip } from './zip';
 
 beforeAll(()=>{
@@ -24,6 +24,14 @@ describe('pixel transforms',()=>{
 
   it('suggests a sixteen-frame grid for a common 128 by 128 sheet',()=>{
     expect(suggestGrid(128,128)).toMatchObject({columns:4,rows:4});
+  });
+
+  it('rejects lossy, fractional, and out-of-range grids before slicing',()=>{
+    const source:PixelFrame={data:new ImageData(64,64),duration:100,name:'sheet'};
+    expect(()=>validateGrid(64,64,3,3)).toThrow(/must divide evenly/i);
+    expect(()=>validateGrid(64,64,1.5,1)).toThrow(/whole number/i);
+    expect(()=>sliceGrid(source,100,1)).toThrow(/Columns must be a whole number from 1 to 64/i);
+    expect(sliceGrid(source,4,4)).toHaveLength(16);
   });
 });
 

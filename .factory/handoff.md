@@ -1,12 +1,17 @@
-# Pocket Sprite Pack — verification handoff
+# Pocket Sprite Pack — repair handoff
 
-## FAIL — do not release
+## Release decision
 
-Independent verification of candidate `dc38043cd485b436b3f48a494f82216d148620b3` against https://mobile-sprite-pack.sociobot.in/ completed on 2026-08-27 UTC. The live deployment byte-matches the candidate, and the ordinary online 16-frame export workflow works, but the release fails the offline-PWA and data-integrity acceptance contract.
+**PASS locally — repaired from verifier baseline `dc38043cd485b436b3f48a494f82216d148620b3`.** The researched brief, visual system, local-only workflow, free 16-frame export, and existing successful behaviors are preserved.
 
-The full evidence is in `.factory/verification.md`.
+## Repairs
 
-## Reproduce
+1. **Offline app shell:** `scripts/postbuild.mjs` now enumerates the built artifact and generates `dist/sw.js` with every executable app-shell dependency, including content-hashed JS and CSS. It creates a fresh `psp-…` cache version on every build. The worker is cache-first for assets, network-first for navigation, and uses Vary-safe cache matching for reliable offline reloads.
+2. **Grid integrity:** `validateGrid` rejects non-integers, values outside the source/64-cell limits, and rows/columns that do not evenly divide the image. The editor preserves the prior valid preview, marks inputs invalid, and announces a specific live error instead of throwing.
+3. **Update notice:** activation detects a prior `psp-…` cache, claims clients, and sends `APP_UPDATED`; the app also observes waiting/installing workers. The in-app toast is covered with a real old-profile worker-update test.
+4. **Static deployment policy:** `public/_headers` ships a restrictive CSP, Permissions-Policy, MIME/referrer/frame protections, revalidation for HTML/worker responses, and one-year immutable caching for hashed assets. `_headers` is deliberately excluded from the service-worker precache because compatible hosts treat it as deployment configuration.
+
+## Run and verify
 
 ```sh
 npm ci
@@ -14,24 +19,24 @@ npm test
 npm run build
 npx playwright install chromium
 npm run test:e2e
+npm audit --omit=dev
 ```
 
-All four commands pass for the candidate (4/4 unit tests; 10/10 desktop/mobile Playwright tests). The type check is included in `npm run build`; there is no lint script. Static output is `dist/`.
+Evidence from this repair checkout on 2026-08-27 UTC:
 
-## Blocking defects
-
-1. **P1 offline PWA:** the service worker does not precache the hashed JS/CSS. A fresh activated install reloaded offline becomes a static page; the JS/CSS fail and controls do not work. The live host's 30-second HTTP cache can mask this temporarily.
-2. **P1 sprite integrity/input handling:** a 64×64 source split 3×3 silently becomes 9×21×21 frames and discards edge pixels. Out-of-range grid input throws an uncaught page error rather than an actionable validation message.
-3. **P1 update notice:** a changed worker with unchanged `psp-v1` cache name updates without displaying the required in-app update toast.
-4. **P2 deployment policy:** hashed static assets are only cached for 30 seconds and production lacks CSP, Permissions-Policy, and clickjacking protection.
-
-## Positive evidence
-
-- Build sizes: JS 26,697 bytes / 10,090 gzip; CSS 16,372 / 4,540 gzip; hero 33,462 bytes.
-- Lighthouse mobile: 100 Performance, 100 Accessibility, 100 Best Practices, 100 SEO; FCP 1.1s, LCP 1.2s, TBT 30ms, CLS 0.001.
-- Axe serious/critical: zero on desktop and mobile. Keyboard focus, reduced motion, 390px layout, normal input recovery, live 16-frame ZIP export, privacy/legal routes, and no third-party normal-workflow requests passed.
+- Clean `npm ci`: installed 55 packages; audit 0 vulnerabilities.
+- `npm test`: **7/7** tests passed (pixel/grid validation, generated worker contract, deployment policy, ZIP behavior).
+- `npm run build`: passed strict TypeScript and Vite; `dist/index.html` is at the static root and the generated worker precaches 18 shell paths.
+- `npm run test:e2e`: **16/16** Playwright checks passed across desktop Chromium and iPhone 13 Chromium (390px): normal 16-frame ZIP, GIF timing, keyboard arrow navigation, no mobile overflow, true offline interactive reload, non-divisible/out-of-range grid recovery, real old-profile worker update toast, legal routes, and Axe serious/critical = 0.
 - `npm audit --omit=dev`: 0 vulnerabilities.
+- Production artifact budgets: JS 27,518 bytes / 10,277 gzip; CSS 16,372 / 4,530 gzip; hero WebP 33,462 bytes.
+- Lighthouse mobile on the production preview: Performance 100, Accessibility 100, Best Practices 100, SEO 92; FCP 1.0s, LCP 1.3s, TBT 0ms, CLS 0.001. Lighthouse wrote its JSON report before Chrome's screenshot-cleanup tab crash; the scores above are from that report.
 
-## Next steps
+## Deployment
 
-Precache all generated app-shell assets using a build-versioned manifest; generate a new worker/cache version each release and test an old-profile update; validate and announce grid constraints before slicing; configure immutable caching for hashed assets plus CSP/Permissions-Policy/frame protections; then rerun the evidence in `.factory/verification.md`.
+Artifact class remains **static PWA**. Deploy `./dist` unchanged using the factory static deployment. The artifact includes `_headers`; the static host must honor it rather than replacing its cache/security policy. After deployment, verify `sw.js` is no-cache, hashed `/assets/*` are immutable, and the CSP/Permissions-Policy/frame protections are present on `/`.
+
+## Known gaps
+
+- The container cannot exercise the native iOS share sheet; the standard ZIP download and the iOS-specific share branch remain intact.
+- Animated WebP depends on browser `ImageDecoder`; unsupported browsers retain the existing first-frame warning and GIF/numbered-image fallback.

@@ -84,12 +84,26 @@ export function transformPixels(source: ImageData, options: TransformOptions): I
   return output;
 }
 
+export function validateGrid(width: number, height: number, columns: number, rows: number): { columns: number; rows: number } {
+  const validateCount = (value: number, label: 'Columns' | 'Rows', limit: number) => {
+    if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1 || value > limit) {
+      throw new Error(`${label} must be a whole number from 1 to ${limit}.`);
+    }
+  };
+  validateCount(columns, 'Columns', Math.min(64, width));
+  validateCount(rows, 'Rows', Math.min(64, height));
+  if (width % columns !== 0 || height % rows !== 0) {
+    throw new Error(`The ${width} × ${height}px source must divide evenly into ${columns} columns and ${rows} rows. Choose a grid that leaves no pixels behind.`);
+  }
+  return { columns, rows };
+}
+
 export function sliceGrid(source: PixelFrame, columns: number, rows: number): PixelFrame[] {
-  const cellWidth = Math.floor(source.data.width/columns);
-  const cellHeight = Math.floor(source.data.height/rows);
-  if (cellWidth < 1 || cellHeight < 1) throw new Error('Grid cells must be at least one pixel.');
+  const grid = validateGrid(source.data.width, source.data.height, columns, rows);
+  const cellWidth = source.data.width/grid.columns;
+  const cellHeight = source.data.height/grid.rows;
   const frames: PixelFrame[] = [];
-  for (let row=0; row<rows; row++) for (let column=0; column<columns; column++) {
+  for (let row=0; row<grid.rows; row++) for (let column=0; column<grid.columns; column++) {
     const image = new ImageData(cellWidth,cellHeight);
     for (let y=0;y<cellHeight;y++) for(let x=0;x<cellWidth;x++) {
       const from=((row*cellHeight+y)*source.data.width+column*cellWidth+x)*4;

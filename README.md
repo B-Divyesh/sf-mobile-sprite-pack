@@ -36,7 +36,9 @@ npx playwright install chromium   # once, for browser tests
 npm run test:e2e
 ```
 
-The exact production build command is `npm run build`. It creates `dist/` with `dist/index.html` at its root, plus physical `/privacy/`, `/terms/`, and offline fallback pages. The static host should serve `dist/` as-is over HTTPS.
+The exact production build command is `npm run build`. It creates `dist/` with `dist/index.html` at its root, plus physical `/privacy/`, `/terms/`, and offline fallback pages. The postbuild step generates a fresh service-worker cache version and precaches every app-shell dependency, including hashed JS and CSS.
+
+Deploy `dist/` as a static site over HTTPS. It includes a `_headers` deployment policy for compatible static hosts: content-hashed assets are immutable for one year; HTML and `sw.js` revalidate; CSP, Permissions-Policy, referrer, MIME, and frame protections are defined in the artifact. Do not overwrite those headers at the host.
 
 ## Browser notes
 

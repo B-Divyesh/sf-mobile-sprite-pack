@@ -37,11 +37,20 @@ function setProgress(stop:number){
 function options():TransformOptions{return{trim:trim.checked,padding:Number(padding.value),palette:palette.value as PaletteName,dither:dither.value as DitherName,customPalette:customPalette.value};}
 function rebuildFrames(){
   if(!decodedFrames.length)return;
-  const canSlice=decodedFrames.length===1 && sourceFiles.length===1;
-  baseFrames=canSlice?sliceGrid(decodedFrames[0],Number(columns.value),Number(rows.value)):decodedFrames.map(frame=>({...frame}));
-  if(baseFrames.length>16 && !proUnlocked){baseFrames=baseFrames.slice(0,16);setStatus(`Loaded the first 16 frames. Pocket Pro raises the batch limit; your source remains untouched.`);}
-  transformedFrames=baseFrames.map(frame=>({...frame,data:transformPixels(frame.data,options())}));
-  currentFrame=Math.min(currentFrame,transformedFrames.length-1); rebuildThumbnails(); renderAll();
+  try{
+    const canSlice=decodedFrames.length===1 && sourceFiles.length===1;
+    let nextBaseFrames=canSlice?sliceGrid(decodedFrames[0],Number(columns.value),Number(rows.value)):decodedFrames.map(frame=>({...frame}));
+    if(nextBaseFrames.length>16 && !proUnlocked){nextBaseFrames=nextBaseFrames.slice(0,16);setStatus(`Loaded the first 16 frames. Pocket Pro raises the batch limit; your source remains untouched.`);}
+    const nextTransformedFrames=nextBaseFrames.map(frame=>({...frame,data:transformPixels(frame.data,options())}));
+    baseFrames=nextBaseFrames;transformedFrames=nextTransformedFrames;
+    columns.removeAttribute('aria-invalid');rows.removeAttribute('aria-invalid');
+    currentFrame=Math.min(currentFrame,transformedFrames.length-1); rebuildThumbnails(); renderAll();
+    return true;
+  }catch(error){
+    columns.setAttribute('aria-invalid','true');rows.setAttribute('aria-invalid','true');
+    setStatus(error instanceof Error?error.message:'Could not apply that frame grid. Check the columns and rows.','error');
+    return false;
+  }
 }
 
 function renderAll(){
@@ -149,7 +158,17 @@ async function boot(){
   const captured=captureLicenseFromUrl();if(captured)openPro('License received. Verifying…');
   if(await hasProject())$('#resume-button').hidden=false;
   const verdict=await verifyLicense();proUnlocked=verdict.valid;if(captured)$('#license-status').textContent=verdict.valid?'Pocket Pro is unlocked on this device.':'License could not be verified yet.';
-  if('serviceWorker'in navigator){const registration=await navigator.serviceWorker.register('/sw.js');if(registration.waiting)$('#update-toast').hidden=false;navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='APP_UPDATED')$('#update-toast').hidden=false});}
+  if('serviceWorker'in navigator){
+    const hadController=Boolean(navigator.serviceWorker.controller);
+    const showUpdate=()=>{$('#update-toast').hidden=false};
+    navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='APP_UPDATED')showUpdate()});
+    const registration=await navigator.serviceWorker.register('/sw.js');
+    if(registration.waiting)showUpdate();
+    registration.addEventListener('updatefound',()=>{
+      const worker=registration.installing;
+      worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&hadController)showUpdate()});
+    });
+  }
 }
 $('#reload-app').addEventListener('click',()=>location.reload());
 boot().catch(()=>setStatus('The local recovery store is unavailable; editing and export still work.'));
