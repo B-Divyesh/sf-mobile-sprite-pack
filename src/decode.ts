@@ -7,6 +7,7 @@ async function decodeStatic(file: File): Promise<PixelFrame[]> {
   const url=URL.createObjectURL(file);
   try {
     const image=new Image(); image.decoding='async'; image.src=url; await image.decode();
+    if(image.naturalWidth*image.naturalHeight>32_000_000)throw new Error(`${file.name} exceeds the 32-megapixel mobile canvas limit.`);
     const canvas=document.createElement('canvas'); canvas.width=image.naturalWidth; canvas.height=image.naturalHeight;
     canvas.getContext('2d')!.drawImage(image,0,0);
     return [{data:canvasToData(canvas),duration:100,name:file.name.replace(/\.[^.]+$/,'')}];
@@ -17,6 +18,7 @@ async function decodeGif(file: File): Promise<PixelFrame[]> {
   const gif=parseGIF(await file.arrayBuffer());
   const parts=decompressFrames(gif,true);
   const width=gif.lsd.width, height=gif.lsd.height;
+  if(width*height*parts.length>32_000_000)throw new Error(`${file.name} exceeds the 32-megapixel mobile project limit.`);
   let composed=new Uint8ClampedArray(width*height*4);
   const frames:PixelFrame[]=[];
   for(let index=0;index<parts.length;index++){
@@ -26,7 +28,7 @@ async function decodeGif(file: File): Promise<PixelFrame[]> {
       const from=(y*patchWidth+x)*4; const alpha=part.patch[from+3]; if(alpha===0)continue;
       const to=((top+y)*width+left+x)*4; composed.set(part.patch.subarray(from,from+4),to);
     }
-    frames.push({data:new ImageData(new Uint8ClampedArray(composed),width,height),duration:Math.max(20,(part.delay||10)*10),name:`${file.name.replace(/\.[^.]+$/,'')}-${String(index+1).padStart(2,'0')}`});
+    frames.push({data:new ImageData(new Uint8ClampedArray(composed),width,height),duration:Math.max(20,part.delay||100),name:`${file.name.replace(/\.[^.]+$/,'')}-${String(index+1).padStart(2,'0')}`});
     if(part.disposalType===2){for(let y=top;y<top+patchHeight;y++)for(let x=left;x<left+patchWidth;x++)composed.fill(0,(y*width+x)*4,(y*width+x)*4+4);}
     if(part.disposalType===3)composed=before;
   }
@@ -55,7 +57,7 @@ export async function decodeFiles(files:File[]):Promise<{frames:PixelFrame[];war
       const decoded=await decodeAnimatedWebP(file);
       if(decoded)frames.push(...decoded); else {frames.push(...await decodeStatic(file));warnings.push('This browser exposes the first WebP frame only. Export animated WebP as GIF or separate PNGs for all frames.');}
     } else frames.push(...await decodeStatic(file));
-    if(frames.reduce((sum,frame)=>sum+frame.data.width*frame.data.height,0)>80_000_000)throw new Error('This project would exceed the 80-megapixel mobile memory limit. Try fewer or smaller frames.');
+    if(frames.reduce((sum,frame)=>sum+frame.data.width*frame.data.height,0)>32_000_000)throw new Error('This project would exceed the 32-megapixel mobile memory limit. Try fewer or smaller frames.');
   }
   return {frames,warnings};
 }

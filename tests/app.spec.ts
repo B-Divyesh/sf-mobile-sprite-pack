@@ -9,6 +9,7 @@ test('loads a 16-frame sheet and exports a real atlas ZIP', async ({page},testIn
   await expect(page.locator('h1')).toHaveCount(1);
   await expect(page.locator('main')).toHaveCount(1);
   await page.locator('#file-input').setInputFiles(resolve('tests/assets/test-sheet.png'));
+  await page.locator('#auto-grid').click();
   await expect(page.locator('#frame-count')).toContainText('1 / 16');
   await expect(page.locator('#frame-strip button')).toHaveCount(16);
   await page.locator('#trim').check();
@@ -19,6 +20,17 @@ test('loads a 16-frame sheet and exports a real atlas ZIP', async ({page},testIn
   expect(download.suggestedFilename()).toMatch(/pocket-sprite-pack-.*\.zip/);
   await download.saveAs(testInfo.outputPath(download.suggestedFilename()));
   expect(errors).toEqual([]);
+});
+
+test('reconstructs an animated GIF into timed frames',async({page})=>{
+  await page.goto('/');
+  await page.locator('#file-input').setInputFiles(resolve('tests/assets/test-animation.gif'));
+  await expect(page.locator('#frame-count')).toContainText('1 / 2');
+  await expect(page.locator('#delay')).toHaveValue('80');
+  await page.locator('#next-frame').click();
+  await expect(page.locator('#frame-count')).toContainText('2 / 2');
+  await page.locator('#palette').selectOption('gameboy');
+  await expect(page.locator('#transform-note')).toContainText('Moss pocket');
 });
 
 test('app shell returns after the network is disabled',async({page,context})=>{

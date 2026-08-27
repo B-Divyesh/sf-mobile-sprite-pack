@@ -3,7 +3,7 @@ import { decodeFiles } from './decode';
 import { sliceGrid, suggestGrid, transformPixels, type PixelFrame, type TransformOptions, type PaletteName, type DitherName } from './pixels';
 import { createZip } from './zip';
 import { saveProject, loadProject, hasProject, clearProject } from './storage';
-import { captureLicenseFromUrl, isProCached, storeLicense, verifyLicense } from './license';
+import { captureLicenseFromUrl, checkoutUrl, isProCached, storeLicense, verifyLicense } from './license';
 
 const $=<T extends HTMLElement>(selector:string)=>document.querySelector<T>(selector)!;
 const fileInput=$<HTMLInputElement>('#file-input'), dropZone=$<HTMLLabelElement>('#drop-zone');
@@ -20,6 +20,14 @@ let currentFrame=0; let playTimer=0; let proUnlocked=isProCached(); let deferred
 
 interface BeforeInstallPromptEvent extends Event { prompt():Promise<void>; userChoice:Promise<{outcome:string}>; }
 
+function setSettingsEnabled(enabled:boolean){
+  for(const selector of ['#frame-controls','#finish-controls']){
+    const section=$(selector);section.toggleAttribute('data-disabled',!enabled);section.setAttribute('aria-disabled',String(!enabled));
+    section.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLButtonElement|HTMLTextAreaElement>('input,select,button,textarea').forEach(control=>control.disabled=!enabled);
+  }
+}
+setSettingsEnabled(false);
+
 function setStatus(message:string,tone:'normal'|'error'|'success'='normal'){
   status.textContent=message; status.className=`status-line${tone==='normal'?'':` ${tone}`}`;
 }
@@ -27,8 +35,6 @@ function setProgress(stop:number){
   document.querySelectorAll<HTMLElement>('.route-rail li').forEach((item,index)=>{item.classList.toggle('active',index+1===stop);item.classList.toggle('complete',index+1<stop);});
 }
 function options():TransformOptions{return{trim:trim.checked,padding:Number(padding.value),palette:palette.value as PaletteName,dither:dither.value as DitherName,customPalette:customPalette.value};}
-function currentDelay(){return Number($('#delay').getAttribute('value')||100)}
-
 function rebuildFrames(){
   if(!decodedFrames.length)return;
   const canSlice=decodedFrames.length===1 && sourceFiles.length===1;
@@ -74,10 +80,10 @@ async function loadFiles(files:File[],persist=true){
     const result=await decodeFiles(files);sourceFiles=files;decodedFrames=result.frames;
     const suggestion=suggestGrid(decodedFrames[0].data.width,decodedFrames[0].data.height);
     const canSlice=decodedFrames.length===1 && files.length===1;
-    columns.value=String(canSlice?suggestion.columns:1);rows.value=String(canSlice?suggestion.rows:1);
-    $('#grid-help').textContent=canSlice?suggestion.confidence:'This source already contains separate animation frames.';
+    setSettingsEnabled(true);
+    columns.value='1';rows.value='1';
+    $('#grid-help').textContent=canSlice?`${suggestion.confidence} Choose Detect grid to apply it.`:'This source already contains separate animation frames.';
     columns.disabled=!canSlice;rows.disabled=!canSlice;$<HTMLButtonElement>('#auto-grid').disabled=!canSlice;
-    $('#frame-controls').removeAttribute('disabled');$('#finish-controls').removeAttribute('disabled');
     $('#source-summary').hidden=false;$('#source-summary').textContent=`${files.map(file=>file.name).join(', ')} · ${decodedFrames.length} decoded frame${decodedFrames.length===1?'':'s'}`;
     stage.classList.remove('empty');$('#empty-state').hidden=true;$('#transport').hidden=false;$('#export-bay').hidden=false;
     rebuildFrames();setProgress(2);
@@ -98,6 +104,7 @@ async function exportAtlas(){
   try{
     const count=transformedFrames.length, sheetColumns=Math.max(1,Math.min(count,Number($<HTMLInputElement>('#export-columns').value)));
     const cellWidth=Math.max(...transformedFrames.map(f=>f.data.width)),cellHeight=Math.max(...transformedFrames.map(f=>f.data.height));
+    if(cellWidth*sheetColumns>8192||cellHeight*Math.ceil(count/sheetColumns)>8192)throw new Error('The sheet would exceed the 8192px mobile export limit. Use fewer sheet columns or smaller frames.');
     const sheetRows=Math.ceil(count/sheetColumns),sheet=document.createElement('canvas');sheet.width=cellWidth*sheetColumns;sheet.height=cellHeight*sheetRows;const sheetCtx=sheet.getContext('2d')!;
     const atlas:{frames:Record<string,unknown>;meta:Record<string,unknown>}={frames:{},meta:{app:'Pocket Sprite Pack',version:'1.0',image:'spritesheet.png',format:'RGBA8888',size:{w:sheet.width,h:sheet.height},scale:'1'}};
     transformedFrames.forEach((frame,index)=>{const column=index%sheetColumns,row=Math.floor(index/sheetColumns),x=column*cellWidth,y=row*cellHeight;const temp=document.createElement('canvas');temp.width=frame.data.width;temp.height=frame.data.height;temp.getContext('2d')!.putImageData(frame.data,0,0);sheetCtx.drawImage(temp,x,y);atlas.frames[`${frame.name}.png`]={frame:{x,y,w:frame.data.width,h:frame.data.height},rotated:false,trimmed:trim.checked,spriteSourceSize:{x:0,y:0,w:frame.data.width,h:frame.data.height},sourceSize:{w:frame.data.width,h:frame.data.height},duration:frame.duration};});
@@ -138,6 +145,7 @@ addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredIn
 $('#install-button').addEventListener('click',async()=>{await deferredInstall?.prompt();deferredInstall=null;$('#install-button').hidden=true});
 
 async function boot(){
+  $<HTMLAnchorElement>('#buy-link').href=checkoutUrl();
   const captured=captureLicenseFromUrl();if(captured)openPro('License received. Verifying…');
   if(await hasProject())$('#resume-button').hidden=false;
   const verdict=await verifyLicense();proUnlocked=verdict.valid;if(captured)$('#license-status').textContent=verdict.valid?'Pocket Pro is unlocked on this device.':'License could not be verified yet.';
