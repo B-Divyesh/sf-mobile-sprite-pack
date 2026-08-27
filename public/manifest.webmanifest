@@ -1,0 +1,16 @@
+{
+  "name": "Pocket Sprite Pack",
+  "short_name": "Sprite Pack",
+  "description": "Offline sprite inspection and atlas packaging for game-jam artists.",
+  "start_url": "/?source=installed-v1",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101a22",
+  "theme_color": "#101a22",
+  "orientation": "any",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "name": "mobile-sprite-pack",
+  "version": "1.0.0",
+  "description": "Live: https://mobile-sprite-pack.sociobot.in — built by the Param Factory (`pwa-offline`).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "build": "tsc --noEmit && vite build && node scripts/postbuild.mjs",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/B-Divyesh/sf-mobile-sprite-pack.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/B-Divyesh/sf-mobile-sprite-pack/issues"
+  },
+  "homepage": "https://github.com/B-Divyesh/sf-mobile-sprite-pack#readme",
+  "dependencies": {
+    "gifuct-js": "^2.1.2"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}

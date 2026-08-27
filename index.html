@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#101a22" />
+    <meta name="description" content="Inspect, finish, and package sprite frames into engine-ready atlases entirely on your device." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <title>Pocket Sprite Pack — offline sprite atlas maker</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to sprite packer</a>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Pocket Sprite Pack home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>Pocket Sprite Pack</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#packer">Packer</a>
+        <button class="quiet-button" id="install-button" hidden>Install</button>
+        <button class="quiet-button" id="pro-button" aria-haspopup="dialog">Pro</button>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Local line · runs offline</p>
+          <h1 id="page-title">Your sprites.<br /><em>Cleared for departure.</em></h1>
+          <p class="lede">Open frames from a phone, check every pixel, then dispatch a spritesheet and JSON atlas—without uploading your art.</p>
+          <a class="ticket-button" href="#packer">Pack a sprite <span aria-hidden="true">↓</span></a>
+          <ul class="trust-list" aria-label="Key features">
+            <li><span aria-hidden="true">◆</span> PNG, GIF &amp; WebP</li>
+            <li><span aria-hidden="true">◆</span> On-device only</li>
+            <li><span aria-hidden="true">◆</span> ZIP + JSON atlas</li>
+          </ul>
+        </div>
+        <figure class="hero-art">
+          <img src="/assets/hero-depot.webp" width="1200" height="788" alt="A pixel courier carrying animation cels through an art-deco night depot" fetchpriority="high" />
+          <figcaption>Sprite dispatch, platform 01</figcaption>
+        </figure>
+      </section>
+
+      <section class="packer-section" id="packer" aria-labelledby="packer-title">
+        <div class="section-heading">
+          <p class="route-code">DSP / 01</p>
+          <div>
+            <h2 id="packer-title">Dispatch desk</h2>
+            <p>Source files stay untouched. Every finish is previewed before export.</p>
+          </div>
+          <span class="offline-badge" id="network-state"><i></i> Ready offline</span>
+        </div>
+
+        <ol class="route-rail" aria-label="Packing progress">
+          <li class="active" data-stop="1"><span>1</span><b>Load</b></li>
+          <li data-stop="2"><span>2</span><b>Frame</b></li>
+          <li data-stop="3"><span>3</span><b>Finish</b></li>
+          <li data-stop="4"><span>4</span><b>Export</b></li>
+        </ol>
+
+        <div class="desk-grid">
+          <aside class="controls" aria-label="Sprite settings">
+            <section class="control-section" aria-labelledby="source-title">
+              <p class="step-label">Stop 1</p>
+              <h3 id="source-title">Load source</h3>
+              <label class="drop-zone" id="drop-zone" for="file-input" tabindex="0">
+                <input id="file-input" type="file" accept="image/png,image/gif,image/webp,.png,.gif,.webp" multiple />
+                <span class="drop-icon" aria-hidden="true">＋</span>
+                <strong>Choose sprite files</strong>
+                <small>or drop PNG, GIF, WebP · 25 MB each</small>
+              </label>
+              <button id="resume-button" class="resume-button" hidden>Resume last local project</button>
+              <div id="source-summary" class="source-summary" hidden></div>
+            </section>
+
+            <section class="control-section settings-section" id="frame-controls" aria-labelledby="frame-title" disabled>
+              <p class="step-label">Stop 2</p>
+              <h3 id="frame-title">Find the frames</h3>
+              <div class="field-pair">
+                <label>Columns <input id="columns" type="number" value="1" min="1" max="64" inputmode="numeric" /></label>
+                <label>Rows <input id="rows" type="number" value="1" min="1" max="64" inputmode="numeric" /></label>
+              </div>
+              <button class="secondary-button" id="auto-grid">Detect grid</button>
+              <p class="field-help" id="grid-help">For a single spritesheet. Separate files and animations are already frames.</p>
+            </section>
+
+            <section class="control-section settings-section" id="finish-controls" aria-labelledby="finish-title" disabled>
+              <p class="step-label">Stop 3</p>
+              <h3 id="finish-title">Finish pixels</h3>
+              <label class="check-row"><input id="trim" type="checkbox" /> <span>Trim transparent edges</span></label>
+              <label>Transparent padding <span class="value-out"><output id="padding-output">0</output> px</span>
+                <input id="padding" type="range" value="0" min="0" max="16" />
+              </label>
+              <label>Palette
+                <select id="palette">
+                  <option value="original">Keep original</option>
+                  <option value="pico8">PICO-8 inspired · 16 colors</option>
+                  <option value="gameboy">Moss pocket · 4 colors</option>
+                  <option value="cga">Signal CGA · 4 colors</option>
+                  <option value="custom">Custom palette · Pro</option>
+                </select>
+              </label>
+              <label>Dithering
+                <select id="dither">
+                  <option value="none">None</option>
+                  <option value="floyd">Floyd–Steinberg</option>
+                </select>
+              </label>
+              <div id="custom-palette-wrap" hidden>
+                <label>Custom hex colors
+                  <textarea id="custom-palette" rows="2" spellcheck="false">#101a22, #fff5d6, #f4b942, #ef6a5b</textarea>
+                </label>
+              </div>
+              <p class="transform-note" id="transform-note">No color transform. Transparency is preserved.</p>
+            </section>
+          </aside>
+
+          <section class="preview-panel" aria-labelledby="preview-title">
+            <div class="preview-toolbar">
+              <div>
+                <p class="step-label">Inspection window</p>
+                <h3 id="preview-title">Native pixel preview</h3>
+              </div>
+              <label class="zoom-control">Zoom <input id="zoom" type="range" min="1" max="16" value="6" /><output id="zoom-output">6×</output></label>
+            </div>
+            <div class="canvas-stage empty" id="canvas-stage" tabindex="0" aria-label="Frame preview. Use left and right arrow keys to change frame.">
+              <div class="empty-state" id="empty-state">
+                <span class="empty-sprite" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+                <strong>No cargo on the line</strong>
+                <p>Choose one spritesheet, an animated GIF/WebP, or a sequence of numbered images.</p>
+              </div>
+              <canvas id="preview-canvas" width="1" height="1" aria-label="Current transformed sprite frame"></canvas>
+            </div>
+            <div class="transport" id="transport" hidden>
+              <button id="prev-frame" aria-label="Previous frame">←</button>
+              <button id="play-frame" aria-label="Play animation">Play</button>
+              <button id="next-frame" aria-label="Next frame">→</button>
+              <p><strong id="frame-count">Frame 1 / 1</strong><span id="frame-size">—</span></p>
+              <label>Delay <input id="delay" type="number" value="100" min="20" max="5000" step="10" /> ms</label>
+            </div>
+            <div class="frame-strip" id="frame-strip" role="list" aria-label="Frames"></div>
+
+            <section class="export-bay" id="export-bay" aria-labelledby="export-title" hidden>
+              <div>
+                <p class="step-label">Stop 4</p>
+                <h3 id="export-title">Ready to dispatch</h3>
+                <p id="export-summary">Spritesheet PNG + JSON atlas in one ZIP.</p>
+              </div>
+              <label>Sheet columns <input id="export-columns" type="number" min="1" max="16" value="4" inputmode="numeric" /></label>
+              <button class="ticket-button" id="export-button">Export atlas ZIP</button>
+            </section>
+          </section>
+        </div>
+        <div class="status-line" id="status" role="status" aria-live="polite">Waiting for source files.</div>
+      </section>
+
+      <section class="proof-band" aria-labelledby="local-title">
+        <p class="route-code">PRV / LOCAL</p>
+        <h2 id="local-title">Your artwork never leaves this device.</h2>
+        <p>Processing happens in your browser. The last project is stored locally for recovery and can be cleared at any time.</p>
+        <button class="secondary-button" id="clear-data">Clear local project</button>
+      </section>
+    </main>
+
+    <footer>
+      <div><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><strong>Pocket Sprite Pack</strong></div>
+      <p>Built for jam nights. Decorative depot artwork is AI-generated for this product.</p>
+      <nav aria-label="Legal"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><button id="footer-pro">Pocket Pro</button></nav>
+    </footer>
+
+    <dialog id="pro-dialog" aria-labelledby="pro-title">
+      <button class="dialog-close" id="close-pro" aria-label="Close Pro details">×</button>
+      <p class="eyebrow">Pocket Pro · one-time</p>
+      <h2 id="pro-title">More room for the big jam.</h2>
+      <p>US $9 once unlocks custom palettes, batches over 16 frames, and reusable export presets. Core atlas export stays free.</p>
+      <ul><li>No subscription</li><li>Works offline after verification</li><li>Sociobot is merchant of record</li></ul>
+      <a class="ticket-button" id="buy-link" href="https://api.sociobot.in/api/v1/products/mobile-sprite-pack/checkout">Buy Pocket Pro</a>
+      <hr />
+      <form id="license-form">
+        <label for="license-input">Have a license? Paste it here.</label>
+        <div class="license-row"><input id="license-input" autocomplete="off" /><button class="secondary-button">Restore</button></div>
+      </form>
+      <p class="license-status" id="license-status" role="status"></p>
+      <p class="legal-small">Purchases and refunds are handled by Sociobot/Dodo. See <a href="/terms/">terms</a> and <a href="/privacy/">privacy</a>.</p>
+    </dialog>
+
+    <div class="toast" id="update-toast" role="status" hidden>Update ready. <button id="reload-app">Reload</button></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
