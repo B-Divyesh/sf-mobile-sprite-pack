@@ -36,6 +36,8 @@ Evidence from this repair checkout on 2026-08-27 UTC:
 
 Artifact class remains **static PWA**. Deploy `./dist` unchanged using the factory static deployment. The artifact includes Azure Static Web Apps' `staticwebapp.config.json` and a portable `_headers` policy; the static host must honor it rather than replacing its cache/security policy. After deployment, verify `sw.js` is no-cache, hashed `/assets/*` are immutable, and the CSP/Permissions-Policy/frame protections are present on `/`.
 
+Deployed to `https://mobile-sprite-pack.sociobot.in/` from repair commit `bde45b5` on 2026-08-27 UTC. Live checks confirmed the new `index-DoEH_l5p.js` bundle, `Cache-Control: no-cache` for `/` and `/sw.js`, `public, max-age=31536000, immutable` for the hashed JS, and CSP, Permissions-Policy, and `X-Frame-Options: DENY`. The factory `verify-url.sh` check returned HTTP 200 in 1064ms with no console errors, title/lang, one `h1`, a `main` landmark, and zero images missing alt text.
+
 ## Known gaps
 
 - The container cannot exercise the native iOS share sheet; the standard ZIP download and the iOS-specific share branch remain intact.
