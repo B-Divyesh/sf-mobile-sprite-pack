@@ -6,6 +6,9 @@
   X-Frame-Options: DENY
   Cache-Control: no-cache
 
+/assets/hero-depot.webp
+  Cache-Control: no-cache
+
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 

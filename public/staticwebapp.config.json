@@ -16,6 +16,12 @@
   },
   "routes": [
     {
+      "route": "/assets/hero-depot.webp",
+      "headers": {
+        "Cache-Control": "no-cache"
+      }
+    },
+    {
       "route": "/assets/*",
       "headers": {
         "Cache-Control": "public, max-age=31536000, immutable"

@@ -16,6 +16,7 @@ describe('static deployment policy',()=>{
     expect(azure.globalHeaders['Content-Security-Policy']).toContain("frame-ancestors 'none'");
     expect(azure.globalHeaders['Permissions-Policy']).toContain('payment=()');
     expect(azure.globalHeaders['X-Frame-Options']).toBe('DENY');
+    expect(azure.routes).toContainEqual({route:'/assets/hero-depot.webp',headers:{'Cache-Control':'no-cache'}});
     expect(azure.routes).toContainEqual({route:'/assets/*',headers:{'Cache-Control':'public, max-age=31536000, immutable'}});
     expect(azure.routes).toContainEqual({route:'/sw.js',headers:{'Cache-Control':'no-cache'}});
   });
