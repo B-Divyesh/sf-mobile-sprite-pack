@@ -46,7 +46,7 @@ img { display: block; max-width: 100%; }
 }
 .site-header nav, footer nav { display: flex; align-items: center; gap: 20px; }
 .site-header nav a, .site-header nav button, footer a, footer button {
-  min-height: 44px; display: inline-flex; align-items: center; border: 0; background: transparent;
+  min-inline-size: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent;
   text-decoration: none; color: var(--muted); cursor: pointer;
 }
 .site-header nav a:hover, .site-header nav button:hover, footer a:hover, footer button:hover { color: var(--paper); }

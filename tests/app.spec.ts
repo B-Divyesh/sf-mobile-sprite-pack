@@ -67,6 +67,21 @@ test('keeps frame navigation keyboard-operable without mobile overflow',async({p
   expect(widths.body).toBeLessThanOrEqual(widths.viewport);
 });
 
+test('keeps direct header and legal touch targets at least 44px with safe separation',async({page})=>{
+  await page.goto('/');
+  const targets=['#pro-button','footer a[href="/privacy/"]','footer a[href="/terms/"]'];
+  const geometry=await page.locator(targets.join(',')).evaluateAll(elements=>elements.map(element=>{
+    const rect=element.getBoundingClientRect();
+    return {label:element.textContent?.trim(),left:rect.left,right:rect.right,width:rect.width,height:rect.height};
+  }));
+  expect(geometry).toHaveLength(3);
+  for(const target of geometry){
+    expect(target.width,`${target.label} width`).toBeGreaterThanOrEqual(44);
+    expect(target.height,`${target.label} height`).toBeGreaterThanOrEqual(44);
+  }
+  expect(geometry[2].left-geometry[1].right).toBeGreaterThanOrEqual(8);
+});
+
 test('resumes a transformed project with its packing settings after reload and offline recovery',async({page,context})=>{
   await page.goto('/');
   await page.locator('#file-input').setInputFiles(resolve('tests/assets/test-sheet.png'));
