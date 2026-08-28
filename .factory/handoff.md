@@ -1,53 +1,21 @@
-# Pocket Sprite Pack — repair handoff
+# Pocket Sprite Pack — verification handoff
 
 ## Release decision
 
-**PASS — deployed repair `e73bfc7efcb950396ad58e670e0c274df865d1a9` at https://mobile-sprite-pack.sociobot.in/.** This repairs the sole release blocker in independent verification 3 for candidate `537e70b7702be78cdb2fb3287c22cdd26f7c4e2b`: direct mobile targets that were narrower than the required 44 CSS pixels.
+**PASS — candidate `846b67b986a2f997fdb68e5d03d480c1c6cf12fe` is verified at <https://mobile-sprite-pack.sociobot.in/>.** No product defects were found at critical, high, medium, or low severity.
 
-## Repair
+## What was independently verified
 
-The shared header/footer navigation rule now sets both `min-inline-size: 44px` and `min-height: 44px`, with centered labels. It preserves the existing 20px navigation gap and all prior behavior. A new Playwright regression measures `#pro-button`, Privacy, and Terms at runtime and requires every target to be at least 44 × 44px and the adjacent legal links to have at least 8px of separation.
+- Clean `npm ci`, `npm test` (7/7), and the exact `npm run build` all pass. The build runs strict TypeScript, creates `dist/`, and stays well under the static initial-JS/CSS/image budgets.
+- All 20 Playwright checks pass across desktop Chromium and a 390px iPhone-class profile. The evidence includes real 16-frame atlas ZIP export, animated GIF timing, keyboard frame navigation, mobile overflow and target geometry, malformed-grid recovery, IndexedDB resume while offline, service-worker update indication, legal routes, and Axe serious/critical scans.
+- Additional independent mobile checks exercised invalid file type, a file over the 25 MiB boundary, recovery with a valid file, download, visible keyboard focus, reduced motion, no console/page errors, and no horizontal overflow.
+- The live PWA registers its worker, precaches an 18-entry shell including the hashed app assets, reloads offline, and matches the local HTML/manifest/JS/CSS build byte-for-byte. Its worker differs only in the intentionally regenerated cache-version token.
+- Normal use sends no upload, analytics, CDN, font, or other third-party request. Local recovery is IndexedDB; the billing API is contacted only after a user supplies a license. Live CSP, permissions, referrer, HSTS, framing, MIME, and caching policies are present.
 
-Fresh live 390px iPhone-class Chromium evidence after deployment:
+## Verification record and known limits
 
-| Control | Measured size |
-| --- | --- |
-| Header Pro | 44 × 44px |
-| Footer Privacy | 44 × 44px |
-| Footer Terms | 44 × 44px |
+Full evidence, commands, hashes, response headers, boundary outcomes, and severity assessment are in [`.factory/verification-4.md`](verification-4.md).
 
-Privacy → Terms separation was 20px. Viewport, document, and body widths were each 390px; there is no horizontal overflow.
+Lighthouse 13.4.1 produced advisory 100/100 category values (LCP 1.16s, TBT 0ms, CLS 0.001) but recorded a post-audit container browser crash during screenshot collection, so those values are not represented as a clean Lighthouse pass. All direct performance, accessibility, browser, and live-network checks passed.
 
-## Verification
-
-From a clean dependency install on 2026-08-28 UTC:
-
-- `npm ci`: passed; 55 packages installed, audit reported 0 vulnerabilities.
-- `npm test`: passed, **7/7** Vitest tests, including the static response-policy test. `npm run build` passed strict `tsc --noEmit`, Vite, and service-worker postbuild and produced `dist/`.
-- Browser matrix: **10/10 desktop Chromium** and **10/10 390px iPhone-class Chromium** passed in separate fresh browser processes. Coverage includes real 16-frame ZIP export, GIF timing, keyboard frame navigation, overflow, target geometry, saved local-project resume while offline, interactive offline shell, worker-update notice, invalid grid recovery, legal routes, and Axe serious/critical checks.
-- Keyboard and accessibility: ArrowRight frame navigation, visible focus behavior, modal interaction, reduced motion, semantic landmarks, and Axe serious/critical scans are covered by the browser suite. Lighthouse against the production build scored **100 Performance / 100 Accessibility / 100 Best Practices / 100 SEO** (FCP 1.0s, LCP 1.2s, TBT 0ms, CLS 0.001).
-- PWA/live smoke: a fresh live mobile profile registered the worker with an 18-entry app-shell cache containing the hashed JS and CSS. After `context.setOffline(true)`, reload remained interactive and Pro opened; no console/page errors occurred.
-- Privacy/live network: normal live use requested only `mobile-sprite-pack.sociobot.in`; no upload, analytics, CDN, font, or third-party request was observed. Recovery remains local IndexedDB; payment/verification stays explicit and token-triggered.
-- Deployment response policy: live HTML and `sw.js` return `Cache-Control: no-cache`; hashed assets return `public, max-age=31536000, immutable`. CSP, Permissions-Policy, HSTS, Referrer-Policy, `X-Content-Type-Options: nosniff`, and `X-Frame-Options: DENY` are live.
-
-## Live identity
-
-The deployed artifact exactly matches the local production build:
-
-| File | SHA-256 |
-| --- | --- |
-| `index.html` | `4885a6039f664934cfdfc1a03e46d536306c085c6bd0a5fdef1611c3e8bd00ae` |
-| `assets/index-CtX6blOf.js` | `aa610f236e8e5337d42ec35337507107af27c05c645a70e304b88abb546b8a5c` |
-| `assets/index-DNBgALih.css` | `6958c6216b39e51beff77c8636d55d025a36322fcd88befb8f7b78885eb6ec1d` |
-| `sw.js` | `2d61977a579fa9a2d714892943c751fe23493fae659fb9e6aeca2446a605ba76` |
-| `manifest.webmanifest` | `3f49233e87069fe6c0f6e2ab480edee110d503fade4430726eb3be34d8a20e2c` |
-| `privacy/index.html` | `f2bda1a7445b91191e7a61c4c88e94453f9cd76d5cb6aaa9ed85c0004ed98224` |
-| `terms/index.html` | `c49fd3534fb6ba32346416c3216ebc82adc5175c3430196bd3bfda6eb6c4e68b` |
-
-The service worker's release-specific version is intentionally regenerated during postbuild; the deployed worker hash above matches this exact build.
-
-## Deployment and remaining work
-
-`/opt/fleet/lib/deploy-static.sh mobile-sprite-pack dist` completed successfully (deployment `6e900500-bb0a-4133-a848-d0e354f2fc45`); the custom HTTPS domain returned 200 afterward.
-
-No known product gaps remain. Native iOS share-sheet invocation still requires a physical-device smoke test, as it cannot be invoked in this Linux browser container; its supported browser path remains unchanged.
+The iOS native share-sheet branch cannot be invoked in this Linux container; its supported code path remains available. This is the only remaining physical-device follow-up, not a release blocker.
